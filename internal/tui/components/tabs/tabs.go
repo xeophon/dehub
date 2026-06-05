@@ -153,6 +153,46 @@ func (m Model) renderSectionTabItems(start, end int) string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
 }
 
+func (m Model) SectionAtX(x int) (int, bool) {
+	if x < 0 || m.ctx == nil || len(m.sectionTabs) == 0 {
+		return 0, false
+	}
+	width := m.ctx.ScreenWidth
+	if !m.hasSearchSection {
+		return m.sectionAtXInRange(0, len(m.sectionTabs), x, width)
+	}
+
+	search := m.renderSearchSlot()
+	searchWidth := min(lipgloss.Width(search), width)
+	if x < searchWidth {
+		return 0, true
+	}
+	return m.sectionAtXInRange(1, len(m.sectionTabs), x-searchWidth, max(0, width-searchWidth))
+}
+
+func (m Model) sectionAtXInRange(start, end, x, maxWidth int) (int, bool) {
+	cursor := 0
+	for i := start; i < end; i++ {
+		if i > start {
+			separator := m.ctx.Styles.Tabs.TabSeparator.Render("|")
+			cursor += lipgloss.Width(separator)
+			if cursor > maxWidth {
+				return 0, false
+			}
+		}
+		style := m.ctx.Styles.Tabs.Tab
+		if m.carousel.Cursor() == i {
+			style = m.ctx.Styles.Tabs.ActiveTab
+		}
+		tabWidth := lipgloss.Width(style.Render(m.sectionTabTitle(i)))
+		if x >= cursor && x < cursor+tabWidth && x < maxWidth {
+			return i, true
+		}
+		cursor += tabWidth
+	}
+	return 0, false
+}
+
 func (m Model) sectionTabTitle(i int) string {
 	if i < 0 || i >= len(m.sectionTabs) {
 		return ""

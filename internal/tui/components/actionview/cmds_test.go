@@ -9,6 +9,7 @@ import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/dlvhdr/gh-dehub/v4/internal/config"
 	data "github.com/dlvhdr/gh-dehub/v4/internal/data/actions"
 	api "github.com/dlvhdr/gh-dehub/v4/internal/data/actionsapi"
 	graphql "github.com/hasura/go-graphql-client"
@@ -322,6 +323,46 @@ func TestEmbeddedActionViewDoesNotHandleRefreshKey(t *testing.T) {
 	selected := next.getSelectedCheckItem()
 	if selected == nil || selected.job.Id != "1" {
 		t.Fatalf("expected embedded refresh key to preserve checks selection, got %#v", selected)
+	}
+}
+
+func TestEmbeddedActionViewLeavesSearchKeyForParent(t *testing.T) {
+	m := NewModel("dlvhdr/gh-dehub", "1", ModelOpts{Flat: true})
+	searchMsg := tea.KeyPressMsg{Text: "s", Code: 's'}
+
+	if !IsSearchKey(searchMsg) {
+		t.Fatal("expected default search key to match parent-owned search predicate")
+	}
+	if IsLocalKey(searchMsg) {
+		t.Fatal("expected default search key to stay out of embedded local keys")
+	}
+
+	next, cmd := m.UpdateEmbedded(searchMsg)
+	if cmd != nil {
+		t.Fatal("expected embedded search key to return no command")
+	}
+	if next.IsLogsSearchFocused() {
+		t.Fatal("expected embedded search key to be handled by the parent")
+	}
+}
+
+func TestActionViewSearchKeyPredicateFollowsRebind(t *testing.T) {
+	err := RebindActionsKeybindings([]config.Keybinding{{Key: "/", Builtin: "search"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = RebindActionsKeybindings([]config.Keybinding{{Key: "s", Builtin: "search"}})
+	})
+
+	if IsSearchKey(tea.KeyPressMsg{Text: "s", Code: 's'}) {
+		t.Fatal("expected old search key not to match after rebind")
+	}
+	if !IsSearchKey(tea.KeyPressMsg{Text: "/", Code: '/'}) {
+		t.Fatal("expected rebound search key to match parent-owned search predicate")
+	}
+	if IsLocalKey(tea.KeyPressMsg{Text: "/", Code: '/'}) {
+		t.Fatal("expected rebound search key to stay out of embedded local keys")
 	}
 }
 

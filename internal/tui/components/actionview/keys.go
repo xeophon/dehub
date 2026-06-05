@@ -69,8 +69,8 @@ var (
 	)
 
 	searchKey = key.NewBinding(
-		key.WithKeys("/"),
-		key.WithHelp("/", "search in pane"),
+		key.WithKeys("s"),
+		key.WithHelp("s", "search in pane"),
 	)
 
 	modeKey = key.NewBinding(
@@ -104,8 +104,8 @@ var (
 	)
 
 	rerunKey = key.NewBinding(
-		key.WithKeys("ctrl+r"),
-		key.WithHelp("ctrl+r", "rerun"),
+		key.WithKeys("r"),
+		key.WithHelp("r", "rerun"),
 	)
 
 	prevStepKey = key.NewBinding(
@@ -138,6 +138,8 @@ var (
 // truth for "what is an actionview key" so feature additions only need to
 // touch this package.
 func allLocalKeys() []key.Binding {
+	// searchKey is handled by the parent in embedded views, so `s` can mean
+	// log search in details/checks panes and row filtering in list panes.
 	return []key.Binding{
 		openUrlKey,
 		openPRKey,
@@ -150,7 +152,6 @@ func allLocalKeys() []key.Binding {
 		gotoBottomKey,
 		rightKey,
 		leftKey,
-		searchKey,
 		modeKey,
 		cancelSearchKey,
 		applySearchKey,
@@ -176,10 +177,16 @@ func IsLocalKey(msg tea.KeyMsg) bool {
 	return false
 }
 
+// IsSearchKey reports whether msg matches actionview's parent-owned search key.
+func IsSearchKey(msg tea.KeyMsg) bool {
+	return key.Matches(msg, searchKey)
+}
+
 // RebindActionsKeybindings applies user overrides to the embedded
 // actionview's local keybindings. These bindings are consulted when running
-// standalone and, for keys in allLocalKeys, when the embedded view has focus
-// (the Details pane of the Actions view, or when logs search is focused).
+// standalone and, for keys in allLocalKeys or IsSearchKey, when the embedded
+// view has focus (the Details pane of the Actions view, or when logs search is
+// focused).
 // User-configured embedded-local keys MUST NOT collide with universal parent
 // keybindings (Quit, NextSection, Refresh, etc.).
 func RebindActionsKeybindings(bindings []config.Keybinding) error {

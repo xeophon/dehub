@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/dlvhdr/gh-dehub/v4/internal/tui/common"
+	"github.com/dlvhdr/gh-dehub/v4/internal/tui/components/actionssection"
 	"github.com/dlvhdr/gh-dehub/v4/internal/tui/components/prrow"
 	"github.com/dlvhdr/gh-dehub/v4/internal/tui/components/selection"
 )
@@ -113,6 +114,42 @@ func (m *Model) registerSelectionRegions() {
 	if m.sidebar.IsOpen {
 		registerScroll(m.previewSelectionScroll())
 	}
+}
+
+func (m *Model) registerActionsSelectionRegions(section *actionssection.Model) {
+	if section == nil {
+		return
+	}
+	contentTop := m.copySelectionContentY()
+	firstWidth, secondWidth, _ := actionsPaneWidths(m.ctx.ScreenWidth)
+	workflowSearchHeight := 0
+	runsSearchHeight := 0
+	if section.IsSearchFocused() || section.IsLocalSearchFocused() {
+		switch section.FocusedPane() {
+		case actionssection.PaneWorkflows:
+			workflowSearchHeight = common.SearchHeight
+		case actionssection.PaneRuns:
+			runsSearchHeight = common.SearchHeight
+		}
+	}
+	const outerHeaderHeight = 1
+
+	registerScroll(selection.Scroll{
+		OriginX:       0,
+		OriginY:       contentTop + workflowSearchHeight + outerHeaderHeight + common.TableHeaderHeight,
+		Width:         firstWidth,
+		VisibleHeight: section.Table.RowsViewportHeight(),
+		YOffset:       section.Table.RowsViewportYOffset(),
+		Blocks:        section.Table.SelectionBlocks(),
+	})
+	registerScroll(selection.Scroll{
+		OriginX:       firstWidth,
+		OriginY:       contentTop + runsSearchHeight + outerHeaderHeight + common.TableHeaderHeight,
+		Width:         secondWidth,
+		VisibleHeight: section.RunsTable.RowsViewportHeight(),
+		YOffset:       section.RunsTable.RowsViewportYOffset(),
+		Blocks:        section.RunsTable.SelectionBlocks(),
+	})
 }
 
 // previewSelectionScroll describes the current sidebar content as a scrollable

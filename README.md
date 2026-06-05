@@ -20,16 +20,17 @@ Configuration is largely the same as gh-dash. See the [gh-dash getting started g
 
 ## Common Shortcuts
 
-- `?` opens help.
+- `H` or `?` opens help.
 - `↑` / `↓` move through items.
-- `[` / `]` switch sections.
-- `{` / `}` switch views.
-- `Ctrl+←` focuses the main pane and `Ctrl+→` focuses the preview pane.
-- `/` searches and `s` filters rows.
+- `Shift+Tab` / `Tab` switch sections.
+- `Ctrl+P` / `Ctrl+N` switch views.
+- `F` focuses the main pane and `f` focuses the preview pane.
+- `Ctrl+F` searches and `s` filters rows.
+- Mouse: click rows or tabs, wheel-scroll panes, and drag text to copy.
 - `o` opens the selected item in GitHub.
 - `y` copies the selected item number and `Y` copies its URL.
 - `R` refreshes.
-- `Q` or `Ctrl+C` quits.
+- `q`, `Q`, or `Ctrl+C` quits.
 
 ## How To Run
 

@@ -217,12 +217,12 @@ var Keys = &KeyMap{
 		key.WithHelp("↓", "move down"),
 	),
 	FirstLine: key.NewBinding(
-		key.WithKeys("<", "home"),
-		key.WithHelp("</home", "first item"),
+		key.WithKeys("g", "home", "<"),
+		key.WithHelp("g/home", "first item"),
 	),
 	LastLine: key.NewBinding(
-		key.WithKeys(">", "end"),
-		key.WithHelp(">/end", "last item"),
+		key.WithKeys("G", "end", ">"),
+		key.WithHelp("G/end", "last item"),
 	),
 	CyclePreview: key.NewBinding(
 		key.WithKeys("p"),
@@ -237,52 +237,52 @@ var Keys = &KeyMap{
 		key.WithHelp("R", "refresh"),
 	),
 	PageDown: key.NewBinding(
-		key.WithKeys("ctrl+down"),
-		key.WithHelp("Ctrl+↓", "preview page down"),
+		key.WithKeys("pgdown", "shift+down", "ctrl+down"),
+		key.WithHelp("PgDn/Shift+↓", "page down"),
 	),
 	PageUp: key.NewBinding(
-		key.WithKeys("ctrl+up"),
-		key.WithHelp("Ctrl+↑", "preview page up"),
+		key.WithKeys("pgup", "shift+up", "ctrl+up"),
+		key.WithHelp("PgUp/Shift+↑", "page up"),
 	),
 	CenterFocused: key.NewBinding(
 		key.WithKeys("ctrl+l"),
 		key.WithHelp("Ctrl+l", "center focus"),
 	),
 	PreviewTop: key.NewBinding(
-		key.WithKeys("ctrl+h"),
-		key.WithHelp("Ctrl+h", "preview top"),
+		key.WithKeys("g"),
+		key.WithHelp("g", "preview top"),
 	),
 	PreviewBottom: key.NewBinding(
-		key.WithKeys("ctrl+g"),
-		key.WithHelp("Ctrl+g", "preview bottom"),
+		key.WithKeys("G"),
+		key.WithHelp("G", "preview bottom"),
 	),
 	FocusMain: key.NewBinding(
-		key.WithKeys("ctrl+left"),
-		key.WithHelp("Ctrl+←", "focus main"),
+		key.WithKeys("F"),
+		key.WithHelp("F", "focus main"),
 	),
 	FocusPreview: key.NewBinding(
-		key.WithKeys("ctrl+right"),
-		key.WithHelp("Ctrl+→", "focus preview"),
+		key.WithKeys("f"),
+		key.WithHelp("f", "focus preview"),
 	),
 	NextView: key.NewBinding(
-		key.WithKeys("}"),
-		key.WithHelp("}", "next view"),
+		key.WithKeys("ctrl+n", "shift+right", "}"),
+		key.WithHelp("Ctrl+n", "next view"),
 	),
 	PrevView: key.NewBinding(
-		key.WithKeys("{"),
-		key.WithHelp("{", "previous view"),
+		key.WithKeys("ctrl+p", "shift+left", "{"),
+		key.WithHelp("Ctrl+p", "previous view"),
 	),
 	NextSection: key.NewBinding(
-		key.WithKeys("]"),
-		key.WithHelp("]", "next section"),
+		key.WithKeys("tab", "]"),
+		key.WithHelp("Tab", "next section"),
 	),
 	PrevSection: key.NewBinding(
-		key.WithKeys("["),
-		key.WithHelp("[", "previous section"),
+		key.WithKeys("shift+tab", "["),
+		key.WithHelp("Shift+Tab", "previous section"),
 	),
 	Search: key.NewBinding(
-		key.WithKeys("/"),
-		key.WithHelp("/", "search"),
+		key.WithKeys("ctrl+f"),
+		key.WithHelp("Ctrl+f", "search"),
 	),
 	LocalSearch: key.NewBinding(
 		key.WithKeys("s"),
@@ -297,12 +297,12 @@ var Keys = &KeyMap{
 		key.WithHelp("Y", "copy url"),
 	),
 	Help: key.NewBinding(
-		key.WithKeys("?"),
-		key.WithHelp("?", "help"),
+		key.WithKeys("H", "?"),
+		key.WithHelp("H", "help"),
 	),
 	Quit: key.NewBinding(
-		key.WithKeys("Q", "ctrl+c"),
-		key.WithHelp("Q", "quit"),
+		key.WithKeys("q", "Q", "ctrl+c"),
+		key.WithHelp("q", "quit"),
 	),
 }
 

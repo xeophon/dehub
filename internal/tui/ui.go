@@ -257,6 +257,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		log.Info("Key pressed", "key", msg.String())
 		m.ctx.Error = nil
+		m.syncPreviewFocus()
 		if m.messagePopup != nil {
 			if msg.String() == "esc" || msg.String() == "enter" {
 				m.messagePopup = nil
@@ -281,6 +282,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					cmds = append(cmds, m.onViewedRowChanged())
 					return m, tea.Batch(cmds...)
 				}
+			}
+		}
+		if m.ctx.View == config.ActionsView && currSection != nil {
+			if as, ok := currSection.(*actionssection.Model); ok && as != nil &&
+				as.FocusedPane() == actionssection.PaneDetails &&
+				m.actionRunView != nil &&
+				actionview.IsLocalKey(msg) {
+				view, actionCmd := m.actionRunView.Update(msg)
+				m.actionRunView = &view
+				return m, actionCmd
 			}
 		}
 
@@ -374,6 +385,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
+		actionsDetailsFocused := false
+		if as, ok := currSection.(*actionssection.Model); ok && as != nil {
+			actionsDetailsFocused = m.ctx.View == config.ActionsView &&
+				as.FocusedPane() == actionssection.PaneDetails &&
+				m.actionRunView != nil
+		}
+
 		switch {
 		// In the Actions view, ctrl+left/ctrl+right are reserved for
 		// switching between the Workflows / Runs / Details panes (handled
@@ -443,12 +461,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		// On the PR Checks tab, forward any actionview-local key (step
-		// nav, log scroll, pane switching, log search, etc.) to the
+		// nav, log scroll, pane switching, etc.) to the
 		// embedded actionview. actionview.IsLocalKey is the single
 		// source of truth for the key set, shared with the dashboard's
 		// Actions view forwarding below; feature additions only need to
 		// touch actionview/keys.go. PgUp/PgDn (ctrl+up/ctrl+down) are
 		// matched earlier and keep their outer-sidebar half-page scroll.
+		case m.isPreviewFocused() && m.prView.IsChecksTab() && actionview.IsSearchKey(msg):
+			cmd = m.prView.FocusChecksLogsSearch()
+			m.syncSidebar()
+			return m, cmd
+
 		case m.isPreviewFocused() && m.prView.IsChecksTab() && actionview.IsLocalKey(msg):
 			m.prView, cmd = m.prView.Update(msg)
 			m.syncSidebar()
@@ -539,17 +562,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, cmd
 			}
 
-		case key.Matches(msg, m.keys.LocalSearch) && m.prViewIsActive() && m.prView.IsChecksTab():
-			// Only route `s` to the PR Checks logs search when the
-			// prView is the active surface. Without the prViewIsActive
-			// gate, leaving the PR Checks tab "selected" on prView
-			// caused `s` to be unconditionally consumed by the hidden
-			// prView while in other views (e.g. dashboard Actions),
-			// preventing those views' own local-search handler from
-			// firing.
-			cmd = m.prView.FocusChecksLogsSearch()
-			m.syncSidebar()
-			return m, cmd
+		case actionview.IsSearchKey(msg) && actionsDetailsFocused:
+			return m, m.actionRunView.FocusLogsSearch()
+
+		case key.Matches(msg, m.keys.LocalSearch) && m.ctx.View == config.ActionsView:
+			if actionsDetailsFocused {
+				return m, m.actionRunView.FocusLogsSearch()
+			}
+			if currSection != nil {
+				cmd = currSection.SetIsLocalSearching(true)
+				return m, cmd
+			}
 
 		case key.Matches(msg, m.keys.LocalSearch):
 			if currSection != nil {
@@ -1427,20 +1450,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		{
-			// Selection regions are not registered on every frame (see
-			// View()); register them now so the click can hit-test against the
-			// current preview/rows. Once a drag begins, View keeps them
-			// registered for subsequent dragging frames.
+		// Selection regions are not registered on every frame (see
+		// View()); register them now so the click can hit-test against the
+		// current preview/rows. Once a drag begins, View keeps them
+		// registered for subsequent dragging frames.
+		if as, ok := currSection.(*actionssection.Model); ok && m.ctx.View == config.ActionsView {
+			m.registerActionsSelectionRegions(as)
+		} else {
 			m.registerSelectionRegions()
-			mouse := msg.Mouse()
-			regionID, bounds := copySelectionRegionAt(mouse.X, mouse.Y)
-			if regionID != "" {
-				x, y := clampCopySelectionPoint(mouse.X, mouse.Y, bounds)
-				m.copySelection.begin(regionID, x, y)
-				return m, nil
-			}
 		}
+		mouse := msg.Mouse()
+		regionID, bounds := copySelectionRegionAt(mouse.X, mouse.Y)
+		if regionID != "" {
+			x, y := clampCopySelectionPoint(mouse.X, mouse.Y, bounds)
+			m.copySelection.begin(regionID, x, y)
+			return m, nil
+		}
+		return m, m.handleMouseClick(mouse.X, mouse.Y, "")
 
 	case tea.MouseMotionMsg:
 		if m.copySelection.dragging {
@@ -1459,8 +1485,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.copySelection.update(x, y)
 
 			if !m.copySelection.moved() {
+				startX := m.copySelection.startX
+				startY := m.copySelection.startY
+				regionID := m.copySelection.regionID
 				m.copySelection.cancel()
-				return m, nil
+				return m, m.handleMouseClick(startX, startY, regionID)
 			}
 
 			text := m.copySelectionText()
@@ -1640,7 +1669,7 @@ func (m Model) View() tea.View {
 	var v tea.View
 	v.AltScreen = true
 	v.ReportFocus = true
-	v.MouseMode = tea.MouseModeAllMotion
+	v.MouseMode = tea.MouseModeCellMotion
 
 	// Clear last frame's selection region registry before re-marking regions
 	// during this render pass. Bounds are managed by bubblezone's own scan.
@@ -1666,6 +1695,9 @@ func (m Model) View() tea.View {
 	if currSection != nil {
 		if actionsSection, ok := currSection.(*actionssection.Model); ok && m.ctx.View == config.ActionsView {
 			content = m.renderActionsThreePane(actionsSection)
+			if m.copySelection.dragging {
+				m.registerActionsSelectionRegions(actionsSection)
+			}
 			m.registerActionsScrollRegions(actionsSection)
 		} else {
 			sectionView := selection.MarkStyled(selection.ID("main"), currSection.View())
@@ -2039,11 +2071,11 @@ func (m *Model) isPreviewNavigationKey(msg tea.KeyMsg) bool {
 }
 
 func (m *Model) isPageDownKey(msg tea.KeyMsg) bool {
-	return key.Matches(msg, m.keys.PageDown) || msg.String() == "ctrl+down"
+	return key.Matches(msg, m.keys.PageDown)
 }
 
 func (m *Model) isPageUpKey(msg tea.KeyMsg) bool {
-	return key.Matches(msg, m.keys.PageUp) || msg.String() == "ctrl+up"
+	return key.Matches(msg, m.keys.PageUp)
 }
 
 func (m *Model) mainPageSize() int {

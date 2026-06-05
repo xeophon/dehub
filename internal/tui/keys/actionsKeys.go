@@ -26,24 +26,24 @@ var ActionsKeys = ActionsKeyMap{
 		key.WithHelp("S", "sort order"),
 	),
 	Rerun: key.NewBinding(
-		key.WithKeys("ctrl+r"),
-		key.WithHelp("ctrl+r", "rerun workflow"),
+		key.WithKeys("r"),
+		key.WithHelp("r", "rerun workflow"),
 	),
 	RerunFailed: key.NewBinding(
-		key.WithKeys("ctrl+f"),
-		key.WithHelp("ctrl+f", "rerun failed jobs"),
+		key.WithKeys("f"),
+		key.WithHelp("f", "rerun failed jobs"),
 	),
 	Cancel: key.NewBinding(
 		key.WithKeys("x"),
 		key.WithHelp("x", "cancel workflow"),
 	),
 	FocusNextPane: key.NewBinding(
-		key.WithKeys("ctrl+right"),
-		key.WithHelp("Ctrl+→", "focus next pane"),
+		key.WithKeys("tab"),
+		key.WithHelp("Tab", "focus next pane"),
 	),
 	FocusPrevPane: key.NewBinding(
-		key.WithKeys("ctrl+left"),
-		key.WithHelp("Ctrl+←", "focus prev pane"),
+		key.WithKeys("shift+tab"),
+		key.WithHelp("Shift+Tab", "focus prev pane"),
 	),
 }
 

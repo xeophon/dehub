@@ -41,7 +41,6 @@ The following built-in universal commands can be overridden with custom keybinds
 | `cyclePreview`  | cycle preview between vertical, horizontal, hidden |
 | `openGithub`    | open the selection in GitHub                    |
 | `refresh`       | refresh the current section                     |
-| `refreshAll`    | refresh all sections                            |
 | `redraw`        | redraw the screen - in case of visual artifacts |
 | `pageDown`      | go one page down in the preview pane            |
 | `pageUp`        | go one page up in the preview pane              |
@@ -173,9 +172,9 @@ For example:
 ```yaml
 keybindings:
   notifications:
-    - key: d
-      builtin: markAsDone
     - key: D
+      builtin: markAsDone
+    - key: ctrl+d
       builtin: markAllAsDone
 ```
 

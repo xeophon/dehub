@@ -1554,8 +1554,8 @@ func TestLocalSearchExitsOnVerticalNavKeys(t *testing.T) {
 			assertMsg: "up arrow should exit local search and move to the previous row",
 		},
 		{
-			name: "ctrl+down (page down) exits and advances cursor",
-			key:  tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModCtrl},
+			name: "page down exits and advances cursor",
+			key:  tea.KeyPressMsg{Code: tea.KeyPgDown},
 			// mainPageSize() is MainContentHeight/2 = 10 with the
 			// context below; start far enough up that the page-down
 			// jump lands within the loaded row set (cursor advances
@@ -1563,15 +1563,15 @@ func TestLocalSearchExitsOnVerticalNavKeys(t *testing.T) {
 			startRow:  0,
 			wantRow:   10,
 			wantBlur:  true,
-			assertMsg: "ctrl+down should exit local search and advance the row cursor by one page",
+			assertMsg: "pgdown should exit local search and advance the row cursor by one page",
 		},
 		{
-			name:      "ctrl+up (page up) exits and moves cursor up",
-			key:       tea.KeyPressMsg{Code: tea.KeyUp, Mod: tea.ModCtrl},
+			name:      "page up exits and moves cursor up",
+			key:       tea.KeyPressMsg{Code: tea.KeyPgUp},
 			startRow:  15,
 			wantRow:   5,
 			wantBlur:  true,
-			assertMsg: "ctrl+up should exit local search and move the row cursor up by one page",
+			assertMsg: "pgup should exit local search and move the row cursor up by one page",
 		},
 	}
 
@@ -2094,7 +2094,7 @@ func TestQClosesHelpWithoutQuitting(t *testing.T) {
 		notificationView: notificationview.NewModel(ctx),
 	}
 	m.footer.ShowAll = true
-	require.Contains(t, m.footer.View(), "q/?")
+	require.Contains(t, m.footer.View(), "q/H")
 	require.Contains(t, m.footer.View(), "close help")
 
 	updated, cmd := m.Update(tea.KeyPressMsg{Text: "q"})
@@ -2469,29 +2469,29 @@ func TestPRInputFocusedPageKeysScrollSidebar(t *testing.T) {
 	}
 
 	initialOffset := m.sidebar.YOffset()
-	newModel, _ := m.Update(tea.KeyPressMsg{Text: "ctrl+up"})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyPgUp})
 	m = newModel.(Model)
 	require.Less(t, m.sidebar.YOffset(), initialOffset)
 
 	initialOffset = m.sidebar.YOffset()
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModCtrl})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyPgDown})
 	m = newModel.(Model)
 	require.Greater(t, m.sidebar.YOffset(), initialOffset)
 
-	newModel, _ = m.Update(tea.KeyPressMsg{Text: "ctrl+h"})
+	newModel, _ = m.Update(tea.KeyPressMsg{Text: "g"})
 	m = newModel.(Model)
 	require.Equal(t, 0, m.sidebar.YOffset())
 
-	newModel, _ = m.Update(tea.KeyPressMsg{Text: "ctrl+g"})
+	newModel, _ = m.Update(tea.KeyPressMsg{Text: "G"})
 	m = newModel.(Model)
 	require.Greater(t, m.sidebar.YOffset(), 0)
 }
 
 func TestPreviewFocusRoutesNavigationToSidebar(t *testing.T) {
-	keys.Keys.PageDown.SetKeys("ctrl+down")
-	keys.Keys.PageUp.SetKeys("ctrl+up")
-	keys.Keys.FocusMain.SetKeys("ctrl+left")
-	keys.Keys.FocusPreview.SetKeys("ctrl+right")
+	keys.Keys.PageDown.SetKeys("pgdown")
+	keys.Keys.PageUp.SetKeys("pgup")
+	keys.Keys.FocusMain.SetKeys("F")
+	keys.Keys.FocusPreview.SetKeys("f")
 
 	cfg, err := config.ParseConfig(config.Location{
 		ConfigFlag:       "../config/testdata/test-config.yml",
@@ -2539,7 +2539,7 @@ func TestPreviewFocusRoutesNavigationToSidebar(t *testing.T) {
 		tabs:             tabs.NewModel(ctx),
 	}
 
-	newModel, _ := m.Update(tea.KeyPressMsg{Text: "ctrl+right"})
+	newModel, _ := m.Update(tea.KeyPressMsg{Text: "f"})
 	m = newModel.(Model)
 	require.Equal(t, previewPane, m.activePane)
 
@@ -2550,20 +2550,20 @@ func TestPreviewFocusRoutesNavigationToSidebar(t *testing.T) {
 	require.Equal(t, initialRow, prSection.CurrRow())
 	require.Greater(t, m.sidebar.YOffset(), initialOffset)
 
-	newModel, _ = m.Update(tea.KeyPressMsg{Text: ">"})
+	newModel, _ = m.Update(tea.KeyPressMsg{Text: "G"})
 	m = newModel.(Model)
 	require.Greater(t, m.sidebar.YOffset(), 0)
 
-	newModel, _ = m.Update(tea.KeyPressMsg{Text: "<"})
+	newModel, _ = m.Update(tea.KeyPressMsg{Text: "g"})
 	m = newModel.(Model)
 	require.Equal(t, 0, m.sidebar.YOffset())
 
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModCtrl})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyPgDown})
 	m = newModel.(Model)
 	require.Equal(t, initialRow, prSection.CurrRow())
 	require.Greater(t, m.sidebar.YOffset(), 1)
 
-	newModel, _ = m.Update(tea.KeyPressMsg{Text: "ctrl+left"})
+	newModel, _ = m.Update(tea.KeyPressMsg{Text: "F"})
 	m = newModel.(Model)
 	require.Equal(t, mainPane, m.activePane)
 
@@ -2573,7 +2573,7 @@ func TestPreviewFocusRoutesNavigationToSidebar(t *testing.T) {
 	require.False(t, m.prView.IsTextInputBoxFocused())
 	require.Equal(t, initialRow+1, prSection.CurrRow())
 
-	pageDownMsg := tea.KeyPressMsg{Text: "ctrl+down"}
+	pageDownMsg := tea.KeyPressMsg{Code: tea.KeyPgDown}
 	require.True(t, m.isPageDownKey(pageDownMsg))
 	require.Greater(t, m.getCurrSection().NumRows(), 2)
 	newModel, _ = m.Update(pageDownMsg)

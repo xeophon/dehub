@@ -54,7 +54,7 @@ func (m Model) View() string {
 			Background(m.ctx.Theme.FaintText).
 			Foreground(m.ctx.Theme.SelectedBackground).
 			Padding(0, 1).
-			Render("? help")
+			Render("H help")
 		viewSwitcher := m.renderViewSwitcher(m.ctx)
 		leftSection := ""
 		if m.leftSection != nil {
@@ -143,8 +143,8 @@ type closeHelpKeyMap struct {
 func (k closeHelpKeyMap) FullHelp() [][]key.Binding {
 	groups := k.KeyMap.FullHelp()
 	closeHelp := key.NewBinding(
-		key.WithKeys("q", "?"),
-		key.WithHelp("q/?", "close help"),
+		key.WithKeys("q", "H"),
+		key.WithHelp("q/H", "close help"),
 	)
 
 	for i := range groups {

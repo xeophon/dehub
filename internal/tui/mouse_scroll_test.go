@@ -61,6 +61,8 @@ func newWheelTestModel(t *testing.T, activePane activePane) Model {
 	ctx := &context.ProgramContext{
 		Config:              &cfg,
 		View:                config.PRsView,
+		ScreenWidth:         180,
+		ScreenHeight:        40,
 		MainContentWidth:    100,
 		MainContentHeight:   10,
 		DynamicPreviewWidth: 80,
@@ -244,6 +246,101 @@ func TestMouseWheelRowScrollDebouncesPreview(t *testing.T) {
 	require.Equal(t, startGen+2, m.scrollSettleGen)
 }
 
+func TestMouseClickSelectsMainRow(t *testing.T) {
+	selection.Reset()
+	t.Cleanup(selection.Reset)
+
+	m := newWheelTestModel(t, mainPane)
+	rows := m.getCurrSection().RowsSelectionScroll(m.copySelectionContentY())
+	require.GreaterOrEqual(t, len(rows.Blocks), 2)
+	targetRow := -1
+	var target selection.Block
+	for i, block := range rows.Blocks[1:] {
+		blockTop := block.ContentY
+		blockBottom := block.ContentY + block.Height
+		if max(blockTop, rows.YOffset) < min(blockBottom, rows.YOffset+rows.VisibleHeight) {
+			targetRow = i + 1
+			target = block
+			break
+		}
+	}
+	require.NotEqual(t, -1, targetRow)
+	x := rows.OriginX + 1
+	y := rows.OriginY + target.ContentY - rows.YOffset
+
+	newModel, _ := m.Update(tea.MouseClickMsg{X: x, Y: y, Button: tea.MouseLeft})
+	m = newModel.(Model)
+	require.True(t, m.copySelection.dragging, "clicking a row starts a possible copy-selection drag")
+
+	newModel, _ = m.Update(tea.MouseReleaseMsg{X: x, Y: y, Button: tea.MouseLeft})
+	m = newModel.(Model)
+
+	require.False(t, m.copySelection.dragging)
+	require.Equal(t, targetRow, m.getCurrSection().CurrRow())
+}
+
+func TestMouseClickFocusesPreviewPane(t *testing.T) {
+	m := newWheelTestModel(t, mainPane)
+	bounds := m.previewPaneBounds(m.copySelectionContentY())
+
+	newModel, _ := m.Update(tea.MouseClickMsg{X: bounds.X + 1, Y: bounds.Y + 1, Button: tea.MouseLeft})
+	m = newModel.(Model)
+
+	require.Equal(t, previewPane, m.activePane)
+	require.Equal(t, "preview", m.ctx.ActivePane)
+}
+
+func TestMouseClickSelectsActionsWorkflowRow(t *testing.T) {
+	selection.Reset()
+	t.Cleanup(selection.Reset)
+
+	m := newActionsWheelTestModel(t)
+	as := m.actions[0].(*actionssection.Model)
+	m.registerActionsSelectionRegions(as)
+
+	require.GreaterOrEqual(t, len(as.Table.SelectionBlocks()), 2)
+	target := as.Table.SelectionBlocks()[1]
+	x := 1
+	y := common.TabsHeight + 1 + common.TableHeaderHeight + target.ContentY
+
+	newModel, _ := m.Update(tea.MouseClickMsg{X: x, Y: y, Button: tea.MouseLeft})
+	m = newModel.(Model)
+	require.True(t, m.copySelection.dragging, "clicking a workflow row starts a possible copy-selection drag")
+
+	newModel, _ = m.Update(tea.MouseReleaseMsg{X: x, Y: y, Button: tea.MouseLeft})
+	m = newModel.(Model)
+
+	as = m.actions[0].(*actionssection.Model)
+	require.Equal(t, actionssection.PaneWorkflows, as.FocusedPane())
+	require.Equal(t, 1, as.Table.GetCurrItem())
+}
+
+func TestMouseClickSelectsActionsRunRow(t *testing.T) {
+	selection.Reset()
+	t.Cleanup(selection.Reset)
+
+	m := newActionsWheelTestModel(t)
+	as := m.actions[0].(*actionssection.Model)
+	m.registerActionsSelectionRegions(as)
+
+	require.GreaterOrEqual(t, len(as.RunsTable.SelectionBlocks()), 2)
+	firstWidth, _, _ := actionsPaneWidths(m.ctx.ScreenWidth)
+	target := as.RunsTable.SelectionBlocks()[1]
+	x := firstWidth + 1
+	y := common.TabsHeight + 1 + common.TableHeaderHeight + target.ContentY
+
+	newModel, _ := m.Update(tea.MouseClickMsg{X: x, Y: y, Button: tea.MouseLeft})
+	m = newModel.(Model)
+	require.True(t, m.copySelection.dragging, "clicking a run row starts a possible copy-selection drag")
+
+	newModel, _ = m.Update(tea.MouseReleaseMsg{X: x, Y: y, Button: tea.MouseLeft})
+	m = newModel.(Model)
+
+	as = m.actions[0].(*actionssection.Model)
+	require.Equal(t, actionssection.PaneRuns, as.FocusedPane())
+	require.Equal(t, 1, as.RunsTable.GetCurrItem())
+}
+
 // TestScrollSettleMsgOnlyLatestGenerationRefreshes verifies the settle handler
 // ignores superseded ticks and acts on the current generation.
 func TestScrollSettleMsgOnlyLatestGenerationRefreshes(t *testing.T) {
@@ -368,6 +465,7 @@ func newActionsWheelTestModel(t *testing.T) Model {
 		ScreenHeight:      40,
 		MainContentWidth:  200,
 		MainContentHeight: 30,
+		StartTask:         func(task context.Task) tea.Cmd { return nil },
 	}
 	ctx.Theme = theme.ParseTheme(ctx.Config)
 	ctx.Styles = context.InitStyles(ctx.Theme)
@@ -375,9 +473,13 @@ func newActionsWheelTestModel(t *testing.T) Model {
 	as := actionssection.NewModel(0, ctx, config.ActionsSectionConfig{}, time.Now(), time.Now())
 	for i := 1; i <= 10; i++ {
 		as.Workflows = append(as.Workflows, data.Workflow{Id: int64(i), Name: "workflow", State: "active"})
-		as.Runs = append(as.Runs, data.WorkflowRun{Id: int64(i), DisplayTitle: "run"})
 	}
 	as.Table.SetRows(as.BuildRows())
+	as.SyncSelectedWorkflow()
+	for i := 1; i <= 10; i++ {
+		as.Runs = append(as.Runs, data.WorkflowRun{Id: int64(i), DisplayTitle: "run"})
+	}
+	as.RunsTable.SetIsLoading(false)
 	as.RunsTable.SetRows(as.BuildRunRows())
 
 	m := Model{
